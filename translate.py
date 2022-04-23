@@ -15,16 +15,17 @@ def setup_argparse():
     parser.add_argument("-s", "--src", default="es_XX", help="The mBART language code of the source language.")
     parser.add_argument("-t", "--tgt", default="en_XX", help="The mBART language of the target language")
     parser.add_argument("-b", "--batch-size", default=16, type=int, help="The batch size for inference")
+    parser.add_argument("-d", "--device", default="cuda:0", help="The device to which the inference should be delegated")
     return parser
 
 def batch(l, batch_size=16):
     for i in range(0, len(l), batch_size):
         yield l[i:i+batch_size]
 
-def translate(model, tokenizer, src, tgt_code, batch_size):
+def translate(model, tokenizer, src, tgt_code, batch_size, device):
     translations = []
     for b in batch(src, batch_size):
-        model_inputs = tokenizer(b, padding=True, return_tensors="pt", max_length=512, truncation=True).to("cuda:0")
+        model_inputs = tokenizer(b, padding=True, return_tensors="pt", max_length=512, truncation=True).to(device)
 
         generated_tokens = model.generate(
             **model_inputs,
@@ -37,7 +38,7 @@ def translate(model, tokenizer, src, tgt_code, batch_size):
 if __name__ == "__main__":
     args = setup_argparse().parse_args()
 
-    model = MBartForConditionalGeneration.from_pretrained(args.model)
+    model = MBartForConditionalGeneration.from_pretrained(args.model).to(args.device)
     tokenizer = MBart50TokenizerFast.from_pretrained(args.model)
     tokenizer.src_lang = args.src
     tokenizer.tgt_lang = args.tgt
