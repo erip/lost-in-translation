@@ -4,8 +4,6 @@
 from pathlib import Path
 from argparse import ArgumentParser
 
-import pandas as pd
-
 from transformers import pipeline, MBart50TokenizerFast, MBartForConditionalGeneration
 
 
@@ -23,9 +21,9 @@ def batch(l, batch_size=16):
     for i in range(0, len(l), batch_size):
         yield l[i:i+batch_size]
 
-def translate(model, tokenizer, src, tgt_code):
+def translate(model, tokenizer, src, tgt_code, batch_size):
     translations = []
-    for b in batch(src):
+    for b in batch(src, batch_size):
         model_inputs = tokenizer(b, padding=True, return_tensors="pt", max_length=512, truncation=True).to("cuda:0")
 
         generated_tokens = model.generate(
@@ -45,7 +43,7 @@ if __name__ == "__main__":
     tokenizer.tgt_lang = args.tgt
 
     text = [line.strip() for line in open(args.in_file, encoding="utf-8")]
-    translations = translate(model, tokenizer, text, args.tgt)
+    translations = translate(model, tokenizer, text, args.tgt, args.batch_size)
     # For whatever reason the target token isn't getting stripped...
     with open(args.out_file, "w", encoding="utf-8") as f:
         for t in translations:
